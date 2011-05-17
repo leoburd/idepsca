@@ -1,0 +1,29 @@
+<?php
+
+/**
+ * Implementation of hook_voipscript_get_script_names()
+ */
+function idepsca_voipscript_get_script_names() {
+  $script_names[] = 'idepsca_287g_script';
+  return $script_names;
+}
+
+/**
+ * Implementation of hook_voipscript_load_script()
+ */
+function idepsca_voipscript_load_script($script_name, $options=NULL) {
+  $script = NULL;
+  switch($script_name) {
+    default:
+      break;
+    case 'idepsca_287g_script':
+      $script = new VoipScript('idepsca_287g_script');
+      $script->addSay(t("Hello to the 287g script"));
+      $script->addSay(t("Bye bye."));
+      $script->addHangup();
+      break;
+  }
+  return $script;
+}
+
+

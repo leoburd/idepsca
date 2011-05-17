@@ -1,0 +1,6 @@
+; $Id$
+name = IDEPSCA
+description = Provides VoIP Drupal scripts for IDEPSCAs campaigns
+dependencies[] = voipcall
+package = IDEPSCA
+core = 6.x
