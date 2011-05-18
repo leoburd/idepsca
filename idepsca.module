@@ -4,7 +4,9 @@
  * Implementation of hook_voipscript_get_script_names()
  */
 function idepsca_voipscript_get_script_names() {
+  $script_names[] = 'idepsca_287g_welcome';
   $script_names[] = 'idepsca_287g_script';
+  $script_names[] = 'idepsca_287g_record_story';
   return $script_names;
 }
 
@@ -12,18 +14,139 @@ function idepsca_voipscript_get_script_names() {
  * Implementation of hook_voipscript_load_script()
  */
 function idepsca_voipscript_load_script($script_name, $options=NULL) {
+
   $script = NULL;
   switch($script_name) {
     default:
       break;
-    case 'idepsca_287g_script':
-      $script = new VoipScript('idepsca_287g_script');
-      $script->addSay(t("Hello to the 287g script"));
-      $script->addSay(t("Bye bye."));
+
+    case 'idepsca_287g_welcome':
+      require(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'idepsca_prompts.inc');
+      $options['language'] = 'English';
+
+      $script = new VoipScript('idepsca_287g_welcome');
+      $script->addSetVoice('woman');
+
+      $script->addSay($welcome_msg_en);
+      $script->addLabel('language_selection');
+      $prompt = new VoipPrompt($welcome_msg_es, NULL, 'es');
+      $script->addGetInput($prompt, 1, '');
+      $script->addGotoIf('spanish_version', "^%input_digits == '1'");
+
+      $script->addLabel('english_version');
+      $script->addGosub('idepsca_287g_script', $options);
+      $script->addGoto('hang up');
+
+      $script->addLabel('spanish_version');
+      $options['language'] = 'Spanish';
+      $script->addGosub('idepsca_287g_script', $options);
+      $script->addGoto('hang up');
+
+      $script->addLabel('hang up');
       $script->addHangup();
+
+      break;
+
+    case 'idepsca_287g_script':
+      require(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'idepsca_prompts.inc');
+      $script = new VoipScript('idepsca_287g_script');
+      if($options['language'] == 'Spanish') {
+        $script->addSetLanguage('es');
+        $system_description = $system_description_es;
+        $script_options = $script_options_es;
+        $invalid_msg = $invalid_msg_es;
+        $thank_you = $thank_you_es;
+      }
+
+      $script->addSetVoice('woman');
+
+      $prompt = new VoipPrompt($system_description, NULL, NULL, 'digits');
+      $script->addSay($prompt);
+
+      $script->addLabel('script_options');
+      $input_options = array(
+        '1' => 'about_287g',
+        '2' => 'about_secure_communities',
+        '3' => 'about_special_order_40',
+        '4' => 'experience_recording',
+        '5' => 'legal_resources',
+        'i' => 'invalid_option',
+        't' => 'invalid_option'
+      );
+      $script->addRunIvrMenu($script_options, $input_options, $invalid_msg);
+
+      $script->addLabel('about_287g');
+      $script->addSay('Describing 287 g');
+      $script->addGoto('script_options');
+
+      $script->addLabel('about_secure_communities');
+      $script->addSay('Describing Secure Communities');
+      $script->addGoto('script_options');
+
+      $script->addLabel('about_special_order_40');
+      $script->addSay('Describing Special Order 40');
+      $script->addGoto('script_options');
+
+      $script->addLabel('experience_recording');
+      $script->addGosub('idepsca_287g_record_story', $options);
+      $script->addGoto('go_back');
+
+      $script->addLabel('legal_resources');
+      $script->addSay('Describing legal resources');
+      $script->addGoto('script_options');
+
+      $script->addLabel('invalid_option');
+      $script->addGoto('go_back');
+
+      $script->addLabel('go_back');
+      $script->addSay($thank_you, 'digits');
+      $script->addReturn();
+
+      break;
+
+    case 'idepsca_287g_record_story':
+      require(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'idepsca_prompts.inc');
+      $script = new VoipScript('idepsca_287g_record_story');
+
+      if ($options['language'] == 'Spanish') {
+        $recording_note = $recording_note_es;
+        $recording_menu = $recording_menu_es;
+        $invalid_msg = $invalid_msg_es;
+      }
+
+      $recording_menu_keys = '123';
+
+      $prompt = new VoipPrompt($recording_note, NULL, NULL, 'digits');
+      $script->addSay($prompt);
+
+      $script->addLabel('recording_menu');
+      $script->addRunIvrMenu($recording_menu, $recording_menu_keys, $invalid_msg);
+      $script->addGotoIf('287g_abuse', "^%ivr_option_selected == '1'");
+      $script->addGotoIf('secure_communities_abuse', "^%ivr_option_selected == '2'");
+      $script->addGotoIf('california_abuse', "^%ivr_option_selected == '3'");
+      $script->addGoto('invalid_option');
+
+      $script->addLabel('287g_abuse');
+      $script->addSay('About to record 287 g abuse');
+      $script->addGoto('go_back');
+
+      $script->addLabel('secure_communities_abuse');
+      $script->addSay('About to record Secure Communities abuse');
+      $script->addGoto('go_back');
+
+      $script->addLabel('california_abuse');
+      $script->addSay('About to record California abuse');
+      $script->addGoto('go_back');
+
+      $script->addLabel('invalid_option');
+      $script->addGoto('go_back');
+
+      $script->addLabel('go_back');
+      $script->addReturn();
+
       break;
   }
+
   return $script;
 }
-
 
