@@ -6,6 +6,7 @@
 function idepsca_voipscript_get_script_names() {
   $script_names[] = 'idepsca_287g_welcome';
   $script_names[] = 'idepsca_287g_script';
+  $script_names[] = 'idepsca_287g_record_menu';
   $script_names[] = 'idepsca_287g_record_story';
   return $script_names;
 }
@@ -28,6 +29,7 @@ function idepsca_voipscript_load_script($script_name, $options=NULL) {
       $script->addSetVoice('woman');
 
       $script->addSay($welcome_msg_en);
+
       $script->addLabel('language_selection');
       $prompt = new VoipPrompt($welcome_msg_es, NULL, 'es');
       $script->addGetInput($prompt, 1, '');
@@ -88,7 +90,7 @@ function idepsca_voipscript_load_script($script_name, $options=NULL) {
       $script->addGoto('script_options');
 
       $script->addLabel('experience_recording');
-      $script->addGosub('idepsca_287g_record_story', $options);
+      $script->addGosub('idepsca_287g_record_menu', $options);
       $script->addGoto('go_back');
 
       $script->addLabel('legal_resources');
@@ -104,9 +106,9 @@ function idepsca_voipscript_load_script($script_name, $options=NULL) {
 
       break;
 
-    case 'idepsca_287g_record_story':
+    case 'idepsca_287g_record_options':
       require(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'idepsca_prompts.inc');
-      $script = new VoipScript('idepsca_287g_record_story');
+      $script = new VoipScript('idepsca_287g_record_options');
 
       if ($options['language'] == 'Spanish') {
         $recording_note = $recording_note_es;
@@ -145,8 +147,116 @@ function idepsca_voipscript_load_script($script_name, $options=NULL) {
       $script->addReturn();
 
       break;
+
+    case 'idepsca_287g_record_story':
+      require(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'idepsca_prompts.inc');
+      $script = new VoipScript('idepsca_287g_record_story');
+//--------
+      $script->addLabel('start');
+      //TODO: Should we add greeting by profile owners?
+      $prompt = t("Please leave your message after the beep.  When done, press the pound key.");
+      $timeout = 5;
+      $end_key = '#';
+      $max_length = 20;
+      $script->addRecord($prompt, $timeout, $end_key, $max_length);
+
+      $script->addSay('You said %recording_url');
+
+      $script->addLabel('accept menu');
+      $text = "To accept, press 1.  To record it once again, press 2. To hangup, press the pound key.";
+      $timeout = 5;
+      $end_key = '';
+      $num_digits = 1;
+      $script->addGetInput($text, $num_digits, $end_key, $timeout);
+
+      $script->addGotoIf('accept recording', "^%input_digits == '1'");
+
+      $script->addGotoIf('start', "^%input_digits == '2'");
+
+      $script->addGotoIf('end call', "^%input_digits == '#'");
+
+      $script->addSay('Invalid input received. Please try again.');
+      $script->addGoto('accept menu');
+
+      $script->addLabel('accept recording');
+      $script->addSay('About to start processing the recorded file.');
+      // Process the recording.
+      $script->addSet('callback_result',
+        '^_idepsca_recording_callback(%call_id, %recording_url, %recording_duration)');
+
+      $script->addSay('The callback returned: %callback_result');
+      $script->addGoto('end call');
+
+      $script->addLabel('no input received');
+      $script->addSay("No input received. Please try again.");
+      $script->addGoto('start');
+
+      $script->addLabel('end call');
+      $script->addSay('Bye bye.');
+      $script->addHangup();
+
+//--------
+      break;
   }
 
   return $script;
+}
+
+/**
+ * Callback for the "idepsca_287g_record_story" script
+ * 
+ * @see hook_voipscript_load_script()
+ */
+function _idepsca_recording_callback($call_id, $recording_url, $recording_duration) {
+  $call = new VoipCall();
+  $call_nid=$call->getNidFromCallId($call_id);
+  $call= VoipCall::load($call_nid);
+
+  //TODO: Should we insert this information in table?
+  /*$sql = "INSERT INTO {phonerecorderfield_recording} (call_nid, url, uid, name, number, duration) " 
+          ."VALUES ('$call_nid', '$recording_url', %d, '%s', '%s', %d) ";
+  $args = array($uid, $name, $number, $recording_duration);
+  $res=db_query($sql, $args);*/
+
+  // Log call blast with watchdog
+  $type = 'idepsca';
+  $log_message = t("New message recorded. Call_id: $call_id, recording_url: $recording_url, recording_duration: $recording_duration, name: $name, number: $number");
+  watchdog($type, $log_message);
+
+  $profile_owner_name = $call->getCallerName();
+  $dest_name = $call->getDestName();
+
+  $profile_owner = user_load(array('name' => $profile_owner_name));
+
+  $params = array(
+    'name' => $dest_name,
+    'url' => $recording_url,
+  );
+
+  $email=$profile_owner->mail;
+//-----
+$email = 'leoburd@media.mit.edu';
+//-----
+  $mail=drupal_mail('idepsca', 'recording', $email, language_default(), $params);
+
+  if ($mail['result']) {
+    return 'Success.';
+  }
+  else {
+    return 'Failure';
+  }
+}
+
+
+/**
+ * Implementation of hook_mail
+ */
+function idepsca_mail($key, &$message, $params) {
+ switch ($key) {
+   case 'recording':
+     $message['subject'] = t('New 287g story');
+     $message['body'] = t("You have a new voicemail from @name. You can listen to it @link", array('@name' => $params['name'], '@link' =>  $params['url']));
+   break;
+  }
 }
 
