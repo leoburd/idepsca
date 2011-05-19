@@ -6,7 +6,7 @@
 function idepsca_voipscript_get_script_names() {
   $script_names[] = 'idepsca_287g_welcome';
   $script_names[] = 'idepsca_287g_script';
-  $script_names[] = 'idepsca_287g_record_menu';
+  $script_names[] = 'idepsca_287g_record_options';
   $script_names[] = 'idepsca_287g_record_story';
   return $script_names;
 }
@@ -28,12 +28,12 @@ function idepsca_voipscript_load_script($script_name, $options=NULL) {
       $script = new VoipScript('idepsca_287g_welcome');
       $script->addSetVoice('woman');
 
-      $script->addSay($welcome_msg_en);
+      $script->addSay($welcome_msg);
 
       $script->addLabel('language_selection');
-      $prompt = new VoipPrompt($welcome_msg_es, NULL, 'es');
-      $script->addGetInput($prompt, 1, '');
-      $script->addGotoIf('spanish_version', "^%input_digits == '1'");
+      $prompt = new VoipPrompt($choose_spanish_msg, NULL, 'es');
+      $script->addGetInput($prompt, 2, '');
+      $script->addGotoIf('spanish_version', "^%input_digits == '2'");
 
       $script->addLabel('english_version');
       $script->addGosub('idepsca_287g_script', $options);
@@ -76,6 +76,7 @@ function idepsca_voipscript_load_script($script_name, $options=NULL) {
         't' => 'invalid_option'
       );
       $script->addRunIvrMenu($script_options, $input_options, $invalid_msg);
+      $script->addGoto('%ivr_option_selected');
 
       $script->addLabel('about_287g');
       $script->addSay('Describing 287 g');
@@ -90,7 +91,7 @@ function idepsca_voipscript_load_script($script_name, $options=NULL) {
       $script->addGoto('script_options');
 
       $script->addLabel('experience_recording');
-      $script->addGosub('idepsca_287g_record_menu', $options);
+      $script->addGosub('idepsca_287g_record_options', $options);
       $script->addGoto('go_back');
 
       $script->addLabel('legal_resources');
@@ -122,6 +123,7 @@ function idepsca_voipscript_load_script($script_name, $options=NULL) {
       $script->addSay($prompt);
 
       $script->addLabel('recording_menu');
+//TODO: change call below for new API
       $script->addRunIvrMenu($recording_menu, $recording_menu_keys, $invalid_msg);
       $script->addGotoIf('287g_abuse', "^%ivr_option_selected == '1'");
       $script->addGotoIf('secure_communities_abuse', "^%ivr_option_selected == '2'");
