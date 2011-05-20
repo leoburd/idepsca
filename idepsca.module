@@ -117,18 +117,20 @@ function idepsca_voipscript_load_script($script_name, $options=NULL) {
         $invalid_msg = $invalid_msg_es;
       }
 
-      $recording_menu_keys = '123';
-
       $prompt = new VoipPrompt($recording_note, NULL, NULL, 'digits');
       $script->addSay($prompt);
 
       $script->addLabel('recording_menu');
-//TODO: change call below for new API
-      $script->addRunIvrMenu($recording_menu, $recording_menu_keys, $invalid_msg);
-      $script->addGotoIf('287g_abuse', "^%ivr_option_selected == '1'");
-      $script->addGotoIf('secure_communities_abuse', "^%ivr_option_selected == '2'");
-      $script->addGotoIf('california_abuse', "^%ivr_option_selected == '3'");
-      $script->addGoto('invalid_option');
+      $prompt = $recording_menu;
+      $input_options = array(
+        '1' => '287g_abuse',
+        '2' => 'secure_communities_abuse',
+        '3' => 'california_abuse',
+        'i' => 'invalid_option',
+        't' => 'invalid_option'
+      );
+      $script->addRunIvrMenu($prompt, $input_options, $invalid_msg);
+      $script->addGoto('%ivr_option_selected');
 
       $script->addLabel('287g_abuse');
       $script->addSay('About to record 287 g abuse');
@@ -153,51 +155,62 @@ function idepsca_voipscript_load_script($script_name, $options=NULL) {
     case 'idepsca_287g_record_story':
       require(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'idepsca_prompts.inc');
       $script = new VoipScript('idepsca_287g_record_story');
-//--------
+
+      if ($options['language'] == 'Spanish') {
+        $recording_prompt = $recording_prompt_es;
+        $recording_confirmation = $recording_confirmation_es;
+        $final_confirmation = $final_confirmation_es;
+        $story_accepted = $story_accepted_es;
+        $story_rejected = $story_rejected_es;
+      }
+
       $script->addLabel('start');
-      //TODO: Should we add greeting by profile owners?
-      $prompt = t("Please leave your message after the beep.  When done, press the pound key.");
+      $prompt = $recording_prompt;
       $timeout = 5;
       $end_key = '#';
-      $max_length = 20;
+      $max_length = IDEPSCA_MAX_STORY_DURATION;
       $script->addRecord($prompt, $timeout, $end_key, $max_length);
 
-      $script->addSay('You said %recording_url');
-
       $script->addLabel('accept menu');
-      $text = "To accept, press 1.  To record it once again, press 2. To hangup, press the pound key.";
-      $timeout = 5;
-      $end_key = '';
-      $num_digits = 1;
-      $script->addGetInput($text, $num_digits, $end_key, $timeout);
+      $prompt = "$recording_confirmation. You said %recording_url"; 
+      $input_options = array(
+        '1' => 'accept_recording',
+        '2' => 'start',
+        '#' => 'go_back',
+        'i' => 'invalid_option',
+        't' => 'invalid_option'
+      );
+      $script->addRunIvrMenu($prompt, $input_options, $invalid_msg);
+      $script->addGoto('%ivr_option_selected');
 
-      $script->addGotoIf('accept recording', "^%input_digits == '1'");
+      $script->addLabel('invalid_option');
+      $script->addGoto('go_back');
 
-      $script->addGotoIf('start', "^%input_digits == '2'");
+      $script->addLabel('accept_recording');
+      $prompt = $final_confirmation;
+      $input_options = array(
+        '1' => 'save_recording',
+        '2' => 'reject_recording',
+        'i' => 'reject_recording',
+        't' => 'reject_recording'
+      );
+      $script->addRunIvrMenu($prompt, $input_options, $invalid_msg);
+      $script->addGoto('%ivr_option_selected');
 
-      $script->addGotoIf('end call', "^%input_digits == '#'");
-
-      $script->addSay('Invalid input received. Please try again.');
-      $script->addGoto('accept menu');
-
-      $script->addLabel('accept recording');
-      $script->addSay('About to start processing the recorded file.');
-      // Process the recording.
+      $script->addLabel('save_recording');
       $script->addSet('callback_result',
         '^_idepsca_recording_callback(%call_id, %recording_url, %recording_duration)');
-
       $script->addSay('The callback returned: %callback_result');
-      $script->addGoto('end call');
+      $script->addSay($story_accepted);
+      $script->addGoto('go_back');
 
-      $script->addLabel('no input received');
-      $script->addSay("No input received. Please try again.");
-      $script->addGoto('start');
+      $script->addLabel('reject_recording');
+      $script->addSay($story_rejected);
+      $script->addGoto('go_back');
 
-      $script->addLabel('end call');
-      $script->addSay('Bye bye.');
-      $script->addHangup();
-
-//--------
+      $script->addLabel('go_back');
+$script->addSay('About to go back');
+      $script->addReturn();
       break;
   }
 
