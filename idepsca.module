@@ -52,7 +52,6 @@ function idepsca_voipscript_load_script($script_name, $options=NULL) {
     case 'idepsca_287g_script':
       require(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'idepsca_prompts.inc');
       $script = new VoipScript('idepsca_287g_script');
-$options['language'] = 'Spanish';
       if($options['language'] == 'Spanish') {
         $script->addSetLanguage('es');
         $system_description = $system_description_es;
@@ -161,10 +160,9 @@ $script->addSay('About to record California abuse');
 
     case 'idepsca_287g_record_story':
       require(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'idepsca_prompts.inc');
+
       $script = new VoipScript('idepsca_287g_record_story');
 
-$options['language'] = 'Spanish';
-$options['story_type'] = 'california_abuse';
       if ($options['language'] == 'Spanish') {
         $recording_prompt = $recording_prompt_es;
         $recording_confirmation = $recording_confirmation_es;
@@ -181,13 +179,10 @@ $options['story_type'] = 'california_abuse';
       $timeout = 5;
       $end_key = '#';
       $max_length = IDEPSCA_MAX_STORY_DURATION;
-$script->addLog($max_length, 'max_length');
       $script->addRecord($prompt, $timeout, $end_key, $max_length);
 
       $script->addLabel('accept menu');
       $prompt = "$recording_confirmation. You said %recording_url"; 
-//$script->addSay($prompt);
-$script->addLog($prompt, 'prompt 1');
       $input_options = array(
         '#' => 'accept_recording',
         '*' => 'start',
@@ -195,7 +190,6 @@ $script->addLog($prompt, 'prompt 1');
         't' => 'invalid_option'
       );
       $script->addRunIvrMenu($prompt, $input_options, $invalid_msg);
-$script->addLog('%ivr_option_selected', 'ivr_option_selected');
       $script->addGoto('%ivr_option_selected');
 
       $script->addLabel('invalid_option');
@@ -214,8 +208,7 @@ $script->addLog('%ivr_option_selected', 'ivr_option_selected');
 
       $script->addLabel('save_recording');
       $script->addSet('callback_result',
-        "^_idepsca_recording_callback($story_type, %call_id, %recording_url, %recording_duration)");
-      $script->addSay('The callback returned: %callback_result');
+        "^_idepsca_recording_callback('$story_type', %call_id, %recording_url, %recording_duration)");
       $script->addSay($story_accepted);
       $script->addGoto('go_back');
 
@@ -224,7 +217,6 @@ $script->addLog('%ivr_option_selected', 'ivr_option_selected');
       $script->addGoto('go_back');
 
       $script->addLabel('go_back');
-$script->addSay('About to go back');
       $script->addReturn();
       break;
   }
@@ -273,21 +265,19 @@ function _idepsca_recording_callback($story_type, $call_id, $recording_url, $rec
  * Implementation of hook_mail
  */
 function idepsca_mail($key, &$message, $params) {
-watchdog('idepsca', "(_mail) message: " . print_r($message, true) . ', params: ' . print_r($params, true));
 
  switch ($key) {
    case 'new_recording':
+     require(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'idepsca_prompts.inc');
+
      $options = array('@story_type' => $params['story_type'],
                   '@call_id'=> $params['call_id'], 
                   '@caller_number' => $params['caller_number'],
                   '@start_time' => $params['start_time'],
                   '@recording_url' => $params['recording_url'], 
                   '@recording_duration' => $params['recording_duration']);
-     $subject = t('New 287g story of type: @story_type', $options);
-     $message['subject'] = $subject;
-     $body_text = "story_type: @story_type,\ncall_id: @call_id,\ncaller_number: @caller_number,\nstart_time: @start_time,\nrecording_url: @recording_url,\nrecording_duration: @recording_duration";
-     $message['body'] = t($body_text, $options);
-watchdog('idepsca', "message: " . print_r($message, true));
+     $message['subject'] = t(IDEPSCA_EMAIL_SUBJECT, $options);
+     $message['body'] = t(IDEPSCA_EMAIL_BODY, $options);
    break;
   }
 }

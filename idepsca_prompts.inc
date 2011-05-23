@@ -4,15 +4,33 @@
  * Constant definitions
  */
 
+
+// General parameters
+
 define('IDEPSCA_VOICE', 'woman');
 
-define('IDEPSCA_EMAIL', 'leoburd@media.mit.edu');
-
 define('IDEPSCA_MAX_STORY_DURATION', 300); // 300 seconds
+
+
+// URL of the audio files
 
 define('IDEPSCA_ENGLISH', 'http://duke.edu/~ml117/IDEPSCA/InteractiveSystem.wavfiles/English/');
 define('IDEPSCA_SPANISH', 'http://duke.edu/~ml117/IDEPSCA/InteractiveSystem.wavfiles/Spanish/');
 
+
+// Email parameters
+
+define('IDEPSCA_EMAIL', 'leoburd@media.mit.edu');
+
+define('IDEPSCA_EMAIL_SUBJECT', 'New 287g story of type: @story_type');
+
+define('IDEPSCA_EMAIL_BODY', "story_type: @story_type,\ncall_id: @call_id,\ncaller_number: @caller_number,\nstart_time: @start_time,\nrecording_url: @recording_url,\nrecording_duration: @recording_duration");
+
+
+
+/**
+ * Prompts
+ */
 
 // Messages that appear in more than one script
 
