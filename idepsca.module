@@ -181,6 +181,7 @@ $options['story_type'] = 'california_abuse';
       $timeout = 5;
       $end_key = '#';
       $max_length = IDEPSCA_MAX_STORY_DURATION;
+$script->addLog($max_length, 'max_length');
       $script->addRecord($prompt, $timeout, $end_key, $max_length);
 
       $script->addLabel('accept menu');
@@ -238,16 +239,12 @@ $script->addSay('About to go back');
  */
 function _idepsca_recording_callback($story_type, $call_id, $recording_url, $recording_duration) {
 
+  require(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'idepsca_prompts.inc');
+
   $call_nid = VoipCall::getNidFromCallId($call_id);
   $call = VoipCall::load($call_nid);
   $caller_number = $call->getCallerNumber();
   $start_time = $call->getStartTime();
-
-  //TODO: Should we insert this information in table?
-  /*$sql = "INSERT INTO {phonerecorderfield_recording} (call_nid, url, uid, name, number, duration) " 
-          ."VALUES ('$call_nid', '$recording_url', %d, '%s', '%s', %d) ";
-  $args = array($uid, $name, $number, $recording_duration);
-  $res=db_query($sql, $args);*/
 
   // Log call blast with watchdog
   $type = 'idepsca';
@@ -276,18 +273,21 @@ function _idepsca_recording_callback($story_type, $call_id, $recording_url, $rec
  * Implementation of hook_mail
  */
 function idepsca_mail($key, &$message, $params) {
+watchdog('idepsca', "(_mail) message: " . print_r($message, true) . ', params: ' . print_r($params, true));
+
  switch ($key) {
    case 'new_recording':
      $options = array('@story_type' => $params['story_type'],
-                  '@call_id'=> $params['$call_id'], 
-                  '@caller_number' => $params['$caller_number'],
-                  '@start_time' => $params['$start_time'],
-                  '@recording_url' => $params['$recording_url'], 
-                  '@recording_duration' => $params['$recording_duration']);
+                  '@call_id'=> $params['call_id'], 
+                  '@caller_number' => $params['caller_number'],
+                  '@start_time' => $params['start_time'],
+                  '@recording_url' => $params['recording_url'], 
+                  '@recording_duration' => $params['recording_duration']);
      $subject = t('New 287g story of type: @story_type', $options);
      $message['subject'] = $subject;
-     $body_text = "(New story recorded) story_type: @story_type, call_id: @call_id, caller_number: @caller_number, start_time: @start_time, recording_url: @recording_url, recording_duration: @recording_duration";
+     $body_text = "story_type: @story_type,\ncall_id: @call_id,\ncaller_number: @caller_number,\nstart_time: @start_time,\nrecording_url: @recording_url,\nrecording_duration: @recording_duration";
      $message['body'] = t($body_text, $options);
+watchdog('idepsca', "message: " . print_r($message, true));
    break;
   }
 }
