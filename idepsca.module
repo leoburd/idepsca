@@ -233,7 +233,7 @@ function _idepsca_recording_callback($story_type, $call_id, $recording_url, $rec
 
   require(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'idepsca_prompts.inc');
 
-  $call_nid = VoipCall::getNidFromCallId($call_id);
+  $call_nid = VoipCall::getCidFromCallId($call_id);
   $call = VoipCall::load($call_nid);
   $caller_number = $call->getCallerNumber();
   $start_time = $call->getStartTime();

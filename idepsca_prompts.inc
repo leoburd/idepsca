@@ -20,7 +20,7 @@ define('IDEPSCA_SPANISH', 'http://duke.edu/~ml117/IDEPSCA/InteractiveSystem.wavf
 
 // Email parameters
 
-define('IDEPSCA_EMAIL', 'leoburd@media.mit.edu');
+define('IDEPSCA_EMAIL', 'vocesmoviles@idepsca.org, leoburd@media.mit.edu');
 
 define('IDEPSCA_EMAIL_SUBJECT', 'New 287g story of type: @story_type');
 
