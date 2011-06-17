@@ -224,6 +224,11 @@ $script->addSay('About to record California abuse');
   return $script;
 }
 
+
+/*
+ * Internal functions
+ */
+
 /**
  * Callback for the "idepsca_287g_record_story" script
  * 
@@ -243,6 +248,7 @@ function _idepsca_recording_callback($story_type, $call_id, $recording_url, $rec
   $log_message = t("(New story recorded) story_type: $story_type, call_id: $call_id, caller_number: $caller_number, start_time: $start_time, recording_url: $recording_url, recording_duration: $recording_duration");
   watchdog($type, $log_message);
 
+  // send email notification
   $params = array('story_type' => $story_type, 
                   'call_id'=> $call_id, 
                   'caller_number' => $caller_number,
@@ -251,12 +257,19 @@ function _idepsca_recording_callback($story_type, $call_id, $recording_url, $rec
                   'recording_duration' => $recording_duration);
   $email = IDEPSCA_EMAIL;
   $mail=drupal_mail('idepsca', 'new_recording', $email, language_default(), $params);
+  $rc = $mail['result'];
 
-  if ($mail['result']) {
-    return 'Success.';
+  // create audioblog entry
+  if($rc) {
+    idepsca_create_audioblog_node($url, $params);
+  }
+
+  
+  if ($rc){
+    return t('Success.');
   }
   else {
-    return 'Failure';
+    return t('Failure');
   }
 }
 
@@ -280,5 +293,55 @@ function idepsca_mail($key, &$message, $params) {
      $message['body'] = t(IDEPSCA_EMAIL_BODY, $options);
    break;
   }
+}
+
+/**
+ * Convert URL into an audiofield
+ */
+function idepsca_create_audioblog_node($url, $params=array()) {
+  require(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'idepsca_prompts.inc');
+
+  $node->type = 'story';
+  $options = array('@story_type' => $params['story_type'],
+               '@call_id'=> $params['call_id'], 
+               '@caller_number' => $params['caller_number'],
+               '@start_time' => $params['start_time'],
+               '@recording_url' => $params['recording_url'], 
+               '@recording_duration' => $params['recording_duration']);
+  $node->title = t(IDEPSCA_EMAIL_SUBJECT, $options);
+  $node->body = t(IDEPSCA_EMAIL_BODY, $options);
+  $file = _idepsca_transfer_file($url);
+  if($file) {
+    $node->field_audio_story[1]['fid'] = $file['fid'];
+  }
+  node_save($node);
+  return $node;
+}
+
+function _idepsca_transfer_file($url, $validators=array()) {
+    $filename = rawurldecode(basename($url));
+    $filepath = file_create_filename($filename, file_directory_temp());
+
+    // Then make the actual request to download the file.
+    $data = file_get_contents($url);
+
+    //Save it to temporary file.
+    if ($fp = @fopen($filepath, 'w+')) {
+        fputs($fp, $data);
+        fclose($fp);
+    }
+
+    //Save it to default files directory.
+    $destination=file_directory_path();
+    $file = field_file_save_file($filepath, $validators, $destination);
+
+    // Delete the temporary file.
+    @unlink($filepath);
+
+    if ($file) {
+        return $file;
+    }
+
+    return NULL;
 }
 
