@@ -261,7 +261,7 @@ function _idepsca_recording_callback($story_type, $call_id, $recording_url, $rec
 
   // create audioblog entry
   if($rc) {
-    idepsca_create_audioblog_node($url, $params);
+    idepsca_create_audioblog_node($recording_url, $params);
   }
 
   
@@ -302,6 +302,7 @@ function idepsca_create_audioblog_node($url, $params=array()) {
   require(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'idepsca_prompts.inc');
 
   $node->type = 'story';
+  $node->promote = 1;
   $options = array('@story_type' => $params['story_type'],
                '@call_id'=> $params['call_id'], 
                '@caller_number' => $params['caller_number'],
