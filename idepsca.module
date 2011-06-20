@@ -7,7 +7,8 @@ function idepsca_voipscript_get_script_names() {
   $script_names[] = 'idepsca_287g_welcome';
   $script_names[] = 'idepsca_287g_script';
   $script_names[] = 'idepsca_287g_record_options';
-  $script_names[] = 'idepsca_287g_record_story';
+  $script_names[] = 'idepsca_287g_record_story_script';
+  $script_names[] = 'idepsca_287g_record_story_sub';
   return $script_names;
 }
 
@@ -135,19 +136,19 @@ function idepsca_voipscript_load_script($script_name, $options=NULL) {
       $script->addLabel('287g_abuse');
 $script->addSay('About to record 287 g abuse');
       $options['story_type'] = '287g_abuse';
-      $script->addGosub('idepsca_287g_record_story', $options);
+      $script->addGosub('idepsca_287g_record_story_sub', $options);
       $script->addGoto('go_back');
 
       $script->addLabel('secure_communities_abuse');
 $script->addSay('About to record Secure Communities abuse');
       $options['story_type'] = 'secure_communities_abuse';
-      $script->addGosub('idepsca_287g_record_story', $options);
+      $script->addGosub('idepsca_287g_record_story_sub', $options);
       $script->addGoto('go_back');
 
       $script->addLabel('california_abuse');
 $script->addSay('About to record California abuse');
       $options['story_type'] = 'california_abuse';
-      $script->addGosub('idepsca_287g_record_story', $options);
+      $script->addGosub('idepsca_287g_record_story_sub', $options);
       $script->addGoto('go_back');
 
       $script->addLabel('invalid_option');
@@ -158,10 +159,19 @@ $script->addSay('About to record California abuse');
 
       break;
 
-    case 'idepsca_287g_record_story':
+    case 'idepsca_287g_record_story_script':
+      $script = new VoipScript('idepsca_287g_record_story_script');
+$script->addSay('About to record a 287 g abuse story');
+      $options['story_type'] = '287g_abuse';
+      $script->addGosub('idepsca_287g_record_story_sub', $options);
+$script->addSay('bye bye');
+      $script->addHangup();
+      break;
+
+    case 'idepsca_287g_record_story_sub':
       require(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'idepsca_prompts.inc');
 
-      $script = new VoipScript('idepsca_287g_record_story');
+      $script = new VoipScript('idepsca_287g_record_story_sub');
 
       if ($options['language'] == 'Spanish') {
         $recording_prompt = $recording_prompt_es;
@@ -230,7 +240,7 @@ $script->addSay('About to record California abuse');
  */
 
 /**
- * Callback for the "idepsca_287g_record_story" script
+ * Callback for the "idepsca_287g_record_story_sub" script
  * 
  * @see hook_voipscript_load_script()
  */
@@ -242,6 +252,8 @@ function _idepsca_recording_callback($story_type, $call_id, $recording_url, $rec
   $call = VoipCall::load($call_nid);
   $caller_number = $call->getCallerNumber();
   $start_time = $call->getStartTime();
+
+  $rc = TRUE;
 
   // Log call blast with watchdog
   $type = 'idepsca';
@@ -256,8 +268,10 @@ function _idepsca_recording_callback($story_type, $call_id, $recording_url, $rec
                   'recording_url' => $recording_url, 
                   'recording_duration' => $recording_duration);
   $email = IDEPSCA_EMAIL;
-  $mail=drupal_mail('idepsca', 'new_recording', $email, language_default(), $params);
-  $rc = $mail['result'];
+  if($email) {
+    $mail=drupal_mail('idepsca', 'new_recording', $email, language_default(), $params);
+    $rc = $mail['result'];
+  }
 
   // create audioblog entry
   if($rc) {
@@ -309,8 +323,8 @@ function idepsca_create_audioblog_node($url, $params=array()) {
                '@start_time' => $params['start_time'],
                '@recording_url' => $params['recording_url'], 
                '@recording_duration' => $params['recording_duration']);
-  $node->title = t(IDEPSCA_EMAIL_SUBJECT, $options);
-  $node->body = t(IDEPSCA_EMAIL_BODY, $options);
+  $node->title = t(IDEPSCA_BLOG_TITLE, $options);
+  $node->body = t(IDEPSCA_BLOG_BODY, $options);
   $file = _idepsca_transfer_file($url);
   if($file) {
     $node->field_audio_story[1]['fid'] = $file['fid'];

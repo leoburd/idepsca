@@ -22,9 +22,16 @@ define('IDEPSCA_SPANISH', 'http://duke.edu/~ml117/IDEPSCA/InteractiveSystem.wavf
 
 define('IDEPSCA_EMAIL', 'vocesmoviles@idepsca.org, leoburd@media.mit.edu');
 
-define('IDEPSCA_EMAIL_SUBJECT', 'New 287g story of type: @story_type');
+define('IDEPSCA_EMAIL_SUBJECT', 'New IDEPSCA story of type: @story_type');
 
 define('IDEPSCA_EMAIL_BODY', "story_type: @story_type,\ncall_id: @call_id,\ncaller_number: @caller_number,\nstart_time: @start_time,\nrecording_url: @recording_url,\nrecording_duration: @recording_duration");
+
+
+// Audio blog parameters
+
+define('IDEPSCA_BLOG_TITLE', 'New IDEPSCA story of type: @story_type');
+
+define('IDEPSCA_BLOG_BODY', "story_type: @story_type,\ncall_id: @call_id,\ncaller_number: @caller_number,\nstart_time: @start_time,\nrecording_url: @recording_url,\nrecording_duration: @recording_duration");
 
 
 
